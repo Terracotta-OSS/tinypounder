@@ -152,11 +152,6 @@ public class TinyPounderMainUI extends UI {
     consoleRefresher = scheduledExecutorService.scheduleWithFixedDelay(
         () -> access(() -> runningServers.values().forEach(RunningServer::refreshConsole)),
         2, 2, TimeUnit.SECONDS);
-
-    addDetachListener((DetachListener) event -> {
-      runningServers.values().forEach(RunningServer::stop);
-      consoleRefresher.cancel(true);
-    });
   }
 
   private void updateKitControls() {
@@ -1280,6 +1275,7 @@ public class TinyPounderMainUI extends UI {
     Button exitBT = new Button("Close TinyPounder");
     exitBT.addClickListener(event -> new Thread(() -> {
       runningServers.values().forEach(RunningServer::stop);
+      consoleRefresher.cancel(true);
       SpringApplication.exit(appContext);
     }).start());
     kitControlsLayout.addComponent(exitBT);
