@@ -227,9 +227,11 @@ public class TinyPounderMainUI extends UI {
   }
 
   private void initRuntimeLayout() {
-    if (mainLayout.getTab(runtimeLayout) == null) {
-      runtimeLayout = new VerticalLayout();
-      mainLayout.addTab(runtimeLayout, "STEP 4: DATASETS & CACHES");
+    if (settings.getKitPath() != null) {
+      if (mainLayout.getTab(runtimeLayout) == null) {
+        runtimeLayout = new VerticalLayout();
+        mainLayout.addTab(runtimeLayout, "STEP 4: DATASETS & CACHES");
+      }
     }
     if (kitAwareClassLoaderDelegator.containsTerracottaStore() || kitAwareClassLoaderDelegator.containsEhcache()) {
       initClientSecurityLayout();
@@ -1048,7 +1050,7 @@ public class TinyPounderMainUI extends UI {
           sb.append("        <data:directory name=\"" + name.getValue() + "\" use-for-platform=\"false\">" + path.getValue() + "</data:directory>\n");
         }
 
-        // end data roots    
+        // end data roots
         sb.append("      </data:data-directories>\n" +
             "    </config>\n" +
             "\n");
@@ -1192,7 +1194,7 @@ public class TinyPounderMainUI extends UI {
           sb.append(nodePrefix + "hostname=" + hostName.getValue() + "\n");
           sb.append(nodePrefix + "port=" + clientPort.getValue() + "\n");
           sb.append(nodePrefix + "group-port=" + groupPort.getValue() + "\n");
-          sb.append(nodePrefix + "log-dir=" + logs.getValue() + "\n");
+          sb.append(nodePrefix + "log-dir=" + logs.getValue().replace("\\", "\\\\") + System.lineSeparator());
 
           // For testing
           sb.append(nodePrefix + "tc-properties=logging.maxBackups:10,logging.maxLogFileSize:256\n");
@@ -1200,17 +1202,17 @@ public class TinyPounderMainUI extends UI {
 
           if (platformBackup.getValue()) {
             TextField path = (TextField) dataRootGrid.getComponent(DATAROOT_PATH_COLUMN, getBackupRow());
-            sb.append(nodePrefix + "backup-dir=" + path.getValue() + "\n");
+            sb.append(nodePrefix + "backup-dir=" + path.getValue().replace("\\", "\\\\") + System.lineSeparator());
           }
 
           if (ee) {
             if (serverSecurityCheckBox.getValue()) {
-              sb.append("security-dir=" + serverSecurityField.getValue() + "\n");
+              sb.append("security-dir=" + serverSecurityField.getValue().replace("\\", "\\\\") + System.lineSeparator());
             }
 
             if (platformPersistence.getValue()) {
               TextField path = (TextField) dataRootGrid.getComponent(DATAROOT_PATH_COLUMN, getPersistenceRow());
-              sb.append(nodePrefix + "metadata-dir=" + path.getValue() + "\n");
+              sb.append(nodePrefix + "metadata-dir=" + path.getValue().replace("\\", "\\\\") + System.lineSeparator());
             }
 
             // do not know why but .getComponent(x,y) does not work
@@ -1239,9 +1241,9 @@ public class TinyPounderMainUI extends UI {
             for (int i = 0; i < components.size(); i += 2) {
               TextField dataDirName = (TextField) components.get(i);
               TextField dataDirPath = (TextField) components.get(i + 1);
-              dataDirList.add(dataDirName.getValue() + ":" + dataDirPath.getValue());
+              dataDirList.add(dataDirName.getValue() + ":" + dataDirPath.getValue().replace("\\", "\\\\"));
             }
-            sb.append(nodePrefix + "data-dirs=" + String.join(",", dataDirList) + "\n");
+            sb.append((nodePrefix + "data-dirs=" + String.join(",", dataDirList) + System.lineSeparator()));
           }
         }
       }
