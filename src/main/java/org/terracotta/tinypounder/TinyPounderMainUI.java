@@ -48,9 +48,9 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.context.ApplicationContext;
 
 import java.io.File;
-import java.io.FilenameFilter;
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.FileSystems;
 import java.nio.file.FileVisitOption;
 import java.nio.file.Files;
@@ -80,6 +80,7 @@ import java.util.stream.Stream;
 /**
  * The UI class
  */
+@SuppressWarnings("ALL")
 @Theme("tinypounder")
 @Push
 @SpringUI
@@ -937,7 +938,7 @@ public class TinyPounderMainUI extends UI {
           generatePropertiesFile(true);
         }
         List<String> filenames = tcConfigLocationPerStripe.values().stream().map(File::getName).collect(Collectors.toList());
-        Notification.show("Configurations saved:", "Location: " + settings.getKitPath() + "\nFiles: " + filenames, Notification.Type.HUMANIZED_MESSAGE);
+        Notification.show("Configurations saved:", "Location: " + settings.getKitPath() + System.lineSeparator() + "Files: " + filenames, Notification.Type.HUMANIZED_MESSAGE);
       });
       layout.addComponentsAndExpand(generateTcConfig);
 
@@ -979,54 +980,54 @@ public class TinyPounderMainUI extends UI {
       // starts xml
       StringBuilder sb;
       if (ee) {
-        sb = new StringBuilder("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
-            "\n" +
-            "<tc-config xmlns=\"http://www.terracotta.org/config\" \n" +
-            "           xmlns:ohr=\"http://www.terracotta.org/config/offheap-resource\"\n" +
-            "           xmlns:backup=\"http://www.terracottatech.com/config/backup-restore\"\n" +
-            "           xmlns:data=\"http://www.terracottatech.com/config/data-roots\">\n" +
-            "\n" +
-            "  <plugins>\n" +
-            "\n");
+        sb = new StringBuilder("<?xml version=\"1.0\" encoding=\"UTF-8\"?>" + System.lineSeparator() +
+          System.lineSeparator() +
+          "<tc-config xmlns=\"http://www.terracotta.org/config\" " + System.lineSeparator() +
+          "           xmlns:ohr=\"http://www.terracotta.org/config/offheap-resource\"" + System.lineSeparator() +
+          "           xmlns:backup=\"http://www.terracottatech.com/config/backup-restore\"" + System.lineSeparator() +
+          "           xmlns:data=\"http://www.terracottatech.com/config/data-roots\">" + System.lineSeparator() +
+          System.lineSeparator() +
+          "  <plugins>" + System.lineSeparator() +
+          System.lineSeparator());
       } else {
-        sb = new StringBuilder("<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n" +
-            "\n" +
-            "<tc-config xmlns=\"http://www.terracotta.org/config\" \n" +
-            "           xmlns:ohr=\"http://www.terracotta.org/config/offheap-resource\">\n" +
-            "\n" +
-            "  <plugins>\n" +
-            "\n");
+        sb = new StringBuilder("<?xml version=\"1.0\" encoding=\"UTF-8\"?>" + System.lineSeparator() +
+          System.lineSeparator() +
+          "<tc-config xmlns=\"http://www.terracotta.org/config\" " + System.lineSeparator() +
+          "           xmlns:ohr=\"http://www.terracotta.org/config/offheap-resource\">" + System.lineSeparator() +
+          System.lineSeparator() +
+          "  <plugins>" + System.lineSeparator() +
+          System.lineSeparator());
       }
 
       // offheaps
       if (offheapGrid.getRows() > 1) {
-        sb.append("    <config>\n" +
-            "      <ohr:offheap-resources>\n");
+        sb.append("    <config>" + System.lineSeparator() +
+            "      <ohr:offheap-resources>"+ System.lineSeparator());
         for (int r = 1; r < offheapGrid.getRows(); r++) {
           TextField name = (TextField) offheapGrid.getComponent(0, r);
           TextField memory = (TextField) offheapGrid.getComponent(1, r);
-          sb.append("        <ohr:resource name=\"" + name.getValue() + "\" unit=\"MB\">" + memory.getValue() + "</ohr:resource>\n");
+          sb.append("        <ohr:resource name=\"" + name.getValue() + "\" unit=\"MB\">" + memory.getValue() + "</ohr:resource>"+ System.lineSeparator());
         }
-        sb.append("      </ohr:offheap-resources>\n" +
-            "    </config>\n" +
-            "\n");
+        sb.append("      </ohr:offheap-resources>" + System.lineSeparator() +
+            "    </config>" + System.lineSeparator() +
+            System.lineSeparator());
       }
 
       if (ee) {
         // dataroots
-        sb.append("    <config>\n" +
-            "      <data:data-directories>\n");
+        sb.append("    <config>" + System.lineSeparator() +
+            "      <data:data-directories>"+ System.lineSeparator());
         // platform persistece
         if (platformPersistence.getValue()) {
           TextField path = (TextField) dataRootGrid.getComponent(DATAROOT_PATH_COLUMN, getPersistenceRow());
-          sb.append("        <data:directory name=\"PLATFORM\" use-for-platform=\"true\">" + path.getValue() + "</data:directory>\n");
+          sb.append("        <data:directory name=\"PLATFORM\" use-for-platform=\"true\">" + path.getValue() + "</data:directory>"+ System.lineSeparator());
         }
 
         // do not know why but .getComponent(x,y) does not work
 //        for (int r = getDataRootFirstRow(); r < dataRootGrid.getRows(); r++) {
 //          TextField name = (TextField) dataRootGrid.getComponent(DATAROOT_NAME_COLUMN, r);
 //          TextField path = (TextField) dataRootGrid.getComponent(DATAROOT_PATH_COLUMN, r);
-//          sb.append("        <data:directory name=\"" + name.getValue() + "\" use-for-platform=\"false\">" + path.getValue() + "</data:directory>\n");
+//          sb.append("        <data:directory name=\"" + name.getValue() + "\" use-for-platform=\"false\">" + path.getValue() + "</data:directory>" + System.lineSeparator());
 //        }
 
         // workaround - iterate over all components
@@ -1047,46 +1048,43 @@ public class TinyPounderMainUI extends UI {
         for (int i = 0; i < components.size(); i += 2) {
           TextField name = (TextField) components.get(i);
           TextField path = (TextField) components.get(i + 1);
-          sb.append("        <data:directory name=\"" + name.getValue() + "\" use-for-platform=\"false\">" + path.getValue() + "</data:directory>\n");
+          sb.append("        <data:directory name=\"" + name.getValue() + "\" use-for-platform=\"false\">" + path.getValue() + "</data:directory>"+ System.lineSeparator());
         }
 
         // end data roots
-        sb.append("      </data:data-directories>\n" +
-            "    </config>\n" +
-            "\n");
+        sb.append("      </data:data-directories>" + System.lineSeparator() +
+            "    </config>" + System.lineSeparator() + System.lineSeparator() );
 
         // backup
         if (platformBackup.getValue()) {
           TextField path = (TextField) dataRootGrid.getComponent(DATAROOT_PATH_COLUMN, getBackupRow());
-          sb.append("    <service>\n" +
-              "      <backup:backup-restore>\n" +
-              "        <backup:backup-location path=\"" + path.getValue() + "\" />\n" +
-              "      </backup:backup-restore>\n" +
-              "    </service>\n" +
-              "\n");
+          sb.append("    <service>" + System.lineSeparator() +
+              "      <backup:backup-restore>" + System.lineSeparator() +
+              "        <backup:backup-location path=\"" + path.getValue() + "\" />" + System.lineSeparator() +
+              "      </backup:backup-restore>" + System.lineSeparator() +
+              "    </service>" + System.lineSeparator() + System.lineSeparator());
         }
 
         // security
         if (serverSecurityCheckBox.getValue()) {
 
-          sb.append("    <service xmlns:security=\"http://www.terracottatech.com/config/security\">\n" +
-              "      <security:security>\n" +
-              "        <security:security-root-directory>" + serverSecurityField.getValue() + "</security:security-root-directory>\n" +
-              "        <security:ssl-tls/>\n" +
-              "        <security:authentication>\n" +
-              "          <security:file/>\n" +
-              "        </security:authentication>\n" +
-              "      </security:security>\n" +
-              "    </service>\n" +
-              "\n");
+          sb.append(
+              "    <service xmlns:security=\"http://www.terracottatech.com/config/security\">" + System.lineSeparator() +
+              "      <security:security>" + System.lineSeparator() +
+              "        <security:security-root-directory>" + serverSecurityField.getValue() + "</security:security-root-directory>" + System.lineSeparator() +
+              "        <security:ssl-tls/>" + System.lineSeparator() +
+              "        <security:authentication>" + System.lineSeparator() +
+              "          <security:file/>" + System.lineSeparator() +
+              "        </security:authentication>" + System.lineSeparator() +
+              "      </security:security>" + System.lineSeparator() +
+              "    </service>" + System.lineSeparator() + System.lineSeparator());
         }
       }
 
       // servers
-      sb.append("  </plugins>\n" +
-          "\n" +
-          "  <servers>\n" +
-          "\n");
+      sb.append(
+          "  </plugins>" + System.lineSeparator() + System.lineSeparator() +
+          "  <servers>" + System.lineSeparator() +  System.lineSeparator());
 
       for (int serverCol = 1; serverCol < serverGrid.getColumns(); serverCol++) {
         FormLayout form = (FormLayout) serverGrid.getComponent(serverCol, stripeRow);
@@ -1096,29 +1094,33 @@ public class TinyPounderMainUI extends UI {
           TextField hostName = (TextField) form.getComponent(2);
           TextField clientPort = (TextField) form.getComponent(3);
           TextField groupPort = (TextField) form.getComponent(4);
-          sb.append("    <server host=\"" + hostName.getValue() + "\" name=\"" + name.getValue() + "\">\n" +
-              "      <logs>" + logs.getValue() + "</logs>\n" +
-              "      <tsa-port>" + clientPort.getValue() + "</tsa-port>\n" +
-              "      <tsa-group-port>" + groupPort.getValue() + "</tsa-group-port>\n" +
-              "    </server>\n\n");
+          sb.append(
+              "    <server host=\"" + hostName.getValue() + "\" name=\"" + name.getValue() + "\">" + System.lineSeparator() +
+              "      <logs>" + logs.getValue() + "</logs>" + System.lineSeparator() +
+              "      <tsa-port>" + clientPort.getValue() + "</tsa-port>" + System.lineSeparator() +
+              "      <tsa-group-port>" + groupPort.getValue() + "</tsa-group-port>" + System.lineSeparator() +
+              "    </server>"+ System.lineSeparator() + System.lineSeparator());
         }
       }
 
       // reconnect window
-      sb.append("    <client-reconnect-window>" + reconnectWindow.getValue().intValue() + "</client-reconnect-window>\n\n");
-      sb.append("  </servers>\n\n");
+      sb.append(
+        "    <client-reconnect-window>" + reconnectWindow.getValue().intValue() + "</client-reconnect-window>"+ System.lineSeparator() + System.lineSeparator());
+      sb.append("  </servers>"+ System.lineSeparator() + System.lineSeparator());
 
       if (consistencyGroup.isSelected(CONSISTENCY)) {
         int votersCount = Integer.parseInt(votersCountTextField.getValue());
-        sb.append("  <failover-priority>\n" +
-            "    <consistency>\n" +
-            "      <voter count=\"" + votersCount + "\"/>\n" +
-            "    </consistency>\n" +
-            "  </failover-priority>\n\n");
+        sb.append(
+            "  <failover-priority>" + System.lineSeparator() +
+            "    <consistency>" + System.lineSeparator() +
+            "      <voter count=\"" + votersCount + "\"/>" + System.lineSeparator() +
+            "    </consistency>" + System.lineSeparator() +
+            "  </failover-priority>"+ System.lineSeparator() + System.lineSeparator());
       } else {
-        sb.append("  <failover-priority>\n" +
-            "    <availability/>\n" +
-            "  </failover-priority>\n\n");
+        sb.append(
+            "  <failover-priority>" + System.lineSeparator() +
+            "    <availability/>" + System.lineSeparator() +
+            "  </failover-priority>"+ System.lineSeparator() + System.lineSeparator());
       }
 
       // ends XML
@@ -1132,20 +1134,20 @@ public class TinyPounderMainUI extends UI {
       if (location.exists() && !skipConfirmOverwrite) {
         Notification.show("Config already found: " + location.getName());
         try {
-          xml = new String(Files.readAllBytes(location.toPath()), "UTF-8");
+          xml = new String(Files.readAllBytes(location.toPath()), StandardCharsets.UTF_8);
         } catch (IOException e) {
           throw new UncheckedIOException(e);
         }
       } else {
         xml = sb.toString();
         try {
-          Files.write(location.toPath(), xml.getBytes("UTF-8"));
+          Files.write(location.toPath(), xml.getBytes(StandardCharsets.UTF_8));
         } catch (IOException e) {
           throw new UncheckedIOException(e);
         }
       }
 
-      configTextArea.setValue(configTextArea.getValue() + xml + "\n\n");
+      configTextArea.setValue(configTextArea.getValue() + xml + System.lineSeparator() + System.lineSeparator());
 
     }
   }
@@ -1165,20 +1167,20 @@ public class TinyPounderMainUI extends UI {
         TextField memory = (TextField) offheapGrid.getComponent(1, r);
         offheapList.add(name.getValue() + ":" + memory.getValue() + "MB");
       }
-      sb.append("offheap-resources=" + String.join(",", offheapList) + "\n");
+      sb.append("offheap-resources=" + String.join(",", offheapList) + System.lineSeparator());
     }
 
-    sb.append("client-reconnect-window=" + reconnectWindow.getValue().intValue() + "s\n");
+    sb.append("client-reconnect-window=" + reconnectWindow.getValue().intValue() + "s"+ System.lineSeparator());
 
     if (consistencyGroup.isSelected(CONSISTENCY)) {
       int votersCount = Integer.parseInt(votersCountTextField.getValue());
-      sb.append("failover-priority=consistency:" + votersCount + "\n");
+      sb.append("failover-priority=consistency:" + votersCount + System.lineSeparator());
     } else {
-      sb.append("failover-priority=availability\n");
+      sb.append("failover-priority=availability"+ System.lineSeparator());
     }
 
     for (int stripeRow = 1; stripeRow < serverGrid.getRows(); stripeRow++) {
-      sb.append(String.format("stripe.%d.stripe-name=stripe-%d\n", stripeRow, stripeRow));
+      sb.append(String.format("stripe.%d.stripe-name=stripe-%d"+ System.lineSeparator(), stripeRow, stripeRow));
 
       for (int serverCol = 1; serverCol < serverGrid.getColumns(); serverCol++) {
         FormLayout form = (FormLayout) serverGrid.getComponent(serverCol, stripeRow);
@@ -1190,36 +1192,36 @@ public class TinyPounderMainUI extends UI {
           TextField groupPort = (TextField) form.getComponent(4);
 
           String nodePrefix = "stripe." + stripeRow + ".node." + serverCol + ".";
-          sb.append(nodePrefix + "name=" + name.getValue() + "\n");
-          sb.append(nodePrefix + "hostname=" + hostName.getValue() + "\n");
-          sb.append(nodePrefix + "port=" + clientPort.getValue() + "\n");
-          sb.append(nodePrefix + "group-port=" + groupPort.getValue() + "\n");
-          sb.append(nodePrefix + "log-dir=" + logs.getValue().replace("\\", "\\\\") + System.lineSeparator());
+          sb.append(nodePrefix + "name=" + name.getValue() + System.lineSeparator());
+          sb.append(nodePrefix + "hostname=" + hostName.getValue() + System.lineSeparator());
+          sb.append(nodePrefix + "port=" + clientPort.getValue() + System.lineSeparator());
+          sb.append(nodePrefix + "group-port=" + groupPort.getValue() + System.lineSeparator());
+          sb.append(nodePrefix + "log-dir=" + createPath(logs.getValue()) + System.lineSeparator());
 
           // For testing
-          sb.append(nodePrefix + "tc-properties=logging.maxBackups:10,logging.maxLogFileSize:256\n");
-          sb.append(nodePrefix + "logger-overrides=org.terracotta.management:INFO,com.terracottatech.management:INFO\n");
+          sb.append(nodePrefix + "tc-properties=logging.maxBackups:10,logging.maxLogFileSize:256"+ System.lineSeparator());
+          sb.append(nodePrefix + "logger-overrides=org.terracotta.management:INFO,com.terracottatech.management:INFO"+ System.lineSeparator());
 
           if (platformBackup.getValue()) {
             TextField path = (TextField) dataRootGrid.getComponent(DATAROOT_PATH_COLUMN, getBackupRow());
-            sb.append(nodePrefix + "backup-dir=" + path.getValue().replace("\\", "\\\\") + System.lineSeparator());
+            sb.append(nodePrefix + "backup-dir=" + createPath(path.getValue()) + System.lineSeparator());
           }
 
           if (ee) {
             if (serverSecurityCheckBox.getValue()) {
-              sb.append("security-dir=" + serverSecurityField.getValue().replace("\\", "\\\\") + System.lineSeparator());
+              sb.append("security-dir=" + createPath(serverSecurityField.getValue()) + System.lineSeparator());
             }
 
             if (platformPersistence.getValue()) {
               TextField path = (TextField) dataRootGrid.getComponent(DATAROOT_PATH_COLUMN, getPersistenceRow());
-              sb.append(nodePrefix + "metadata-dir=" + path.getValue().replace("\\", "\\\\") + System.lineSeparator());
+              sb.append(nodePrefix + "metadata-dir=" + createPath(path.getValue()) + System.lineSeparator());
             }
 
             // do not know why but .getComponent(x,y) does not work
 //        for (int r = getDataRootFirstRow(); r < dataRootGrid.getRows(); r++) {
 //          TextField name = (TextField) dataRootGrid.getComponent(DATAROOT_NAME_COLUMN, r);
 //          TextField path = (TextField) dataRootGrid.getComponent(DATAROOT_PATH_COLUMN, r);
-//          sb.append("        <data:directory name=\"" + name.getValue() + "\" use-for-platform=\"false\">" + path.getValue() + "</data:directory>\n");
+//          sb.append("        <data:directory name=\"" + name.getValue() + "\" use-for-platform=\"false\">" + path.getValue() + "</data:directory>" + System.lineSeparator());
 //        }
 
             // workaround - iterate over all components
@@ -1241,7 +1243,7 @@ public class TinyPounderMainUI extends UI {
             for (int i = 0; i < components.size(); i += 2) {
               TextField dataDirName = (TextField) components.get(i);
               TextField dataDirPath = (TextField) components.get(i + 1);
-              dataDirList.add(dataDirName.getValue() + ":" + dataDirPath.getValue().replace("\\", "\\\\"));
+              dataDirList.add(dataDirName.getValue() + ":" + createPath(dataDirPath.getValue()));
             }
             sb.append((nodePrefix + "data-dirs=" + String.join(",", dataDirList) + System.lineSeparator()));
           }
@@ -2221,5 +2223,10 @@ public class TinyPounderMainUI extends UI {
       }
     }
   }
+
+  private static String createPath(String path) {
+    return path.replace("\\", "/");
+  }
+
 
 }
