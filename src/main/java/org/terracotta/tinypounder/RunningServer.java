@@ -21,7 +21,6 @@ class RunningServer {
 
   private final File workDir;
   private final String clusterName;
-  private final File licenseFile;
   private final File stripeconfig;
   private final String stripeName;
   private final String serverName;
@@ -34,12 +33,11 @@ class RunningServer {
   private final Consumer<Long> onPID;
   private long pid;
 
-  RunningServer(File workDir, String clusterName, File licenseFile, File stripeconfig, String stripeName,
+  RunningServer(File workDir, String clusterName, File stripeconfig, String stripeName,
                 String serverName, String nodeHostname, String nodePort, TextArea console, int maxLines,
                 Runnable onTerminated, Consumer<String> onState, Consumer<Long> onPID) {
     this.workDir = workDir;
     this.clusterName = clusterName;
-    this.licenseFile = licenseFile;
     this.stripeconfig = stripeconfig;
     this.stripeName = stripeName;
     this.serverName = serverName;
@@ -66,7 +64,7 @@ class RunningServer {
     if (new File(workDir, "init").exists()) {
       Path nodeRepoPath = Paths.get(System.getProperty("user.home"), "terracotta", clusterName, "data",
           "config-db", stripeName, serverName);
-      command = script + " --license-file " + licenseFile
+      command = script
           + " -f " + stripeconfig.getAbsolutePath()
           + " -s " + nodeHostname
           + " -p " + nodePort
