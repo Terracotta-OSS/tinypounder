@@ -32,6 +32,9 @@ public class Settings {
   @Value("${licensePath}")
   private String licensePath;
 
+  @Value("${failoverPriority}")
+  private String failoverPriority;
+
   @Value("${offheapCount}")
   private int offheapCount;
 
@@ -83,20 +86,26 @@ public class Settings {
 
     if (kitPath == null || kitPath.isEmpty()) {
       kitPath = properties.getProperty("kitPath");
-      if(kitPath != null) {
+      if (kitPath != null) {
         File folder = new File(kitPath);
         if (!folder.exists() || !folder.isDirectory()) {
           kitPath = null;
-        } 
+        }
       }
     }
     if (licensePath == null || licensePath.isEmpty()) {
       licensePath = properties.getProperty("licensePath");
-      if(licensePath != null) {
+      if (licensePath != null) {
         File file = new File(licensePath);
         if (!file.exists() || !file.isFile()) {
           licensePath = null;
-        }  
+        }
+      }
+    }
+    if (failoverPriority == null || failoverPriority.isEmpty()) {
+      failoverPriority = properties.getProperty("failoverPriority");
+      if (failoverPriority == null) {
+        failoverPriority = TinyPounderMainUI.AVAILABILITY;
       }
     }
     if (offheapCount < 1) {
@@ -136,6 +145,9 @@ public class Settings {
     Properties properties = new Properties();
     if (kitPath != null) {
       properties.setProperty("kitPath", kitPath);
+    }
+    if (failoverPriority != null) {
+      properties.setProperty("failoverPriority", failoverPriority);
     }
     if (serverSecurityPath != null) {
       properties.setProperty("serverSecurityPath", serverSecurityPath);
@@ -238,5 +250,23 @@ public class Settings {
 
   public void setReconnectWindow(int reconnectWindow) {
     this.reconnectWindow = reconnectWindow;
+  }
+
+  public String getFailoverPriority() {
+    return failoverPriority;
+  }
+
+  public String getFailoverPriorityMode() {
+    final int i = failoverPriority.indexOf(":");
+    return failoverPriority.substring(0, i == -1 ? failoverPriority.length() : i);
+  }
+
+  public String getVoterCount() {
+    final int i = failoverPriority.indexOf(":");
+    return i == -1 ? "1" : failoverPriority.substring(i + 1);
+  }
+
+  public void setFailoverPriority(String failoverPriority) {
+    this.failoverPriority = failoverPriority;
   }
 }

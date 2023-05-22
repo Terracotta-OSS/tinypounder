@@ -91,8 +91,8 @@ public class TinyPounderMainUI extends UI {
   private static final int DATAROOT_PATH_COLUMN = 2;
   private static final File HOME = new File(System.getProperty("user.home"));
   private static final String VERSION = getVersion();
-  private static final String AVAILABILITY = "Availability";
-  private static final String CONSISTENCY = "Consistency";
+  static final String AVAILABILITY = "availability";
+  static final String CONSISTENCY = "consistency";
   private static final String SECURITY = "Security";
 
   @Autowired
@@ -660,12 +660,11 @@ public class TinyPounderMainUI extends UI {
     }
 
     File workDir = new File(settings.getKitPath());
-    File licensePath = new File(settings.getLicensePath());
     String key = stripeName + "-" + serverName;
     TextArea console = getConsole(key);
 
     RunningServer runningServer = new RunningServer(
-        workDir, clusterName, licensePath, stripeconfig, stripeName, serverName, hostname, clientPort, console, 500,
+        workDir, clusterName, stripeconfig, stripeName, serverName, hostname, clientPort, console, 500,
         () -> {
           runningServers.remove(key);
           access(() -> {
@@ -851,7 +850,6 @@ public class TinyPounderMainUI extends UI {
       consistencyGrid = new GridLayout(2, 1);
       consistencyGroup = new RadioButtonGroup<>();
       consistencyGroup.setItems(AVAILABILITY, CONSISTENCY);
-      consistencyGroup.setSelectedItem(CONSISTENCY);
       consistencyGroup.addStyleName(ValoTheme.OPTIONGROUP_HORIZONTAL);
 
       consistencyGrid.addComponent(consistencyGroup);
@@ -861,13 +859,12 @@ public class TinyPounderMainUI extends UI {
       votersGroup.addStyleName("align-bottom3");
       votersCountTextField = new TextField("Voters count");
       votersCountTextField.setMaxLength(2);
-      votersCountTextField.setValue("1");
-      consistencyGrid.addComponent(votersGroup, 1, 0);
 
       votersCountTextField.addValueChangeListener(event -> {
         try {
-          Integer.parseInt(event.getValue());
+          int n = Integer.parseInt(event.getValue());
           votersCountTextField.setCaption("Voters count");
+          settings.setFailoverPriority("consistency:" + n);
         } catch (NumberFormatException e) {
           votersCountTextField.setCaption("Voters count - MUST BE INTEGER");
         }
@@ -878,12 +875,24 @@ public class TinyPounderMainUI extends UI {
       consistencyGroup.addValueChangeListener(event -> {
         if (event.getValue().equals(AVAILABILITY)) {
           consistencyGrid.removeComponent(votersGroup);
+          settings.setFailoverPriority(AVAILABILITY);
         } else {
           consistencyGrid.addComponent(votersGroup, 1, 0);
+          try {
+            int n = Integer.parseInt(votersCountTextField.getValue());
+            settings.setFailoverPriority(CONSISTENCY + ":" + n);
+          } catch (NumberFormatException e) {
+            settings.setFailoverPriority(CONSISTENCY);
+          }
         }
       });
 
       layout.addComponentsAndExpand(consistencyGrid);
+
+      if(CONSISTENCY.equals(settings.getFailoverPriorityMode())) {
+        votersCountTextField.setValue(settings.getVoterCount());
+      }
+      consistencyGroup.setSelectedItem(settings.getFailoverPriorityMode());
     }
 
     // stripe / server form
