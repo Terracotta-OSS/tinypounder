@@ -12,6 +12,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.OutputStreamWriter;
 import java.io.UncheckedIOException;
+import java.util.Optional;
 import java.util.Properties;
 
 /**
@@ -204,8 +205,8 @@ public class Settings {
     this.kitPath = kitPath;
   }
 
-  public String getLicensePath() {
-    return licensePath;
+  public Optional<String> getLicensePath() {
+    return Optional.ofNullable(licensePath);
   }
 
   public void setLicensePath(String licensePath) {
