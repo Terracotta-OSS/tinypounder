@@ -201,7 +201,7 @@ public class TinyPounderMainUI extends UI {
       if (kitPathLayout.getRows() == 1) {
         final TextField licensePath = new TextField();
         licensePath.setWidth(100, Unit.PERCENTAGE);
-        licensePath.setValue(settings.getLicensePath() == null ? "" : settings.getLicensePath());
+        licensePath.setValue(settings.getLicensePath().orElse(""));
         licensePath.setPlaceholder("License location");
         licensePath.addValueChangeListener(event -> {
           try {
@@ -479,7 +479,6 @@ public class TinyPounderMainUI extends UI {
   private void executeConfigToolCommand(Button.ClickEvent event) {
     String command = (String) event.getButton().getData();
     File workDir = new File(settings.getKitPath());
-    File licensePath = new File(settings.getLicensePath());
     LinkedBlockingQueue<String> consoleLines = new LinkedBlockingQueue<>(); // no limit, get all the output
     String script = new File(workDir, "tools/bin/config-tool." + (ProcUtils.isWindows() ? "bat" : "sh")).getAbsolutePath();
     String config = tcConfigLocationPerStripe.values()
@@ -493,7 +492,10 @@ public class TinyPounderMainUI extends UI {
       case "activate": {
         ProcUtils.run(
             workDir,
-            script + " " + command + " -f " + config + " -n " + clusterNameTF.getValue() + " -l " + licensePath,
+            script + " " + command
+                + " -f " + config
+                + " -n " + clusterNameTF.getValue()
+                + (settings.getLicensePath().map(File::new).map(f -> " -l " + f).orElse("")),
             consoleLines,
             newLine -> access(() -> updateMainConsole(consoleLines)),
             () -> access(() -> consoles.setSelectedTab(mainConsole)));
