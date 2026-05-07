@@ -1,6 +1,6 @@
 package org.terracotta.tinypounder;
 
-import com.vaadin.ui.TextArea;
+import org.terracotta.tinypounder.servlet.ConsoleWebSocketEndpoint;
 
 import java.io.File;
 import java.nio.file.Path;
@@ -13,7 +13,7 @@ import java.util.regex.Pattern;
 /**
  * @author Mathieu Carbou
  */
-class RunningServer {
+public class RunningServer {
 
   private static final String ACTIVE_PATTERN = "Becoming State[ ACTIVE-COORDINATOR ]";
   private static final Pattern PID_PATTERN = Pattern.compile("PID is ([0-9]*)");
@@ -21,36 +21,41 @@ class RunningServer {
 
   private final File workDir;
   private final String clusterName;
+  private final String baseLocation;
   private final File stripeconfig;
   private final String stripeName;
   private final String serverName;
   private final String nodeHostname;
   private final String nodePort;
-  private final TextArea console;
+  private final String consoleName;
   private final ArrayBlockingQueue<String> lines;
+  private final java.util.List<String> consoleHistory;
   private final Runnable onTerminated;
   private final Consumer<String> onState;
   private final Consumer<Long> onPID;
   private long pid;
+  private String serverState;
 
-  RunningServer(File workDir, String clusterName, File stripeconfig, String stripeName,
-                String serverName, String nodeHostname, String nodePort, TextArea console, int maxLines,
+  public RunningServer(File workDir, String clusterName, String baseLocation, File stripeconfig, String stripeName,
+                String serverName, String nodeHostname, String nodePort, String consoleName, int maxLines,
                 Runnable onTerminated, Consumer<String> onState, Consumer<Long> onPID) {
     this.workDir = workDir;
     this.clusterName = clusterName;
+    this.baseLocation = baseLocation;
     this.stripeconfig = stripeconfig;
     this.stripeName = stripeName;
     this.serverName = serverName;
     this.nodeHostname = nodeHostname;
     this.nodePort = nodePort;
+    this.consoleName = consoleName;
     this.lines = new ArrayBlockingQueue<>(maxLines);
-    this.console = console;
+    this.consoleHistory = new java.util.concurrent.CopyOnWriteArrayList<>();
     this.onTerminated = onTerminated;
     this.onState = onState;
     this.onPID = onPID;
   }
 
-  void kill() {
+  public void kill() {
     try {
       ProcUtils.kill(pid);
     } catch (InterruptedException e) {
@@ -58,12 +63,15 @@ class RunningServer {
     }
   }
 
-  void start() {
+  public void start() {
     String script = new File(workDir, "server/bin/start-tc-server." + (ProcUtils.isWindows() ? "bat" : "sh")).getAbsolutePath();
     String command;
     if (Paths.get(workDir.toPath().toString(), "tools", "bin", "config-tool.sh").toFile().exists()) {
-      Path nodeRepoPath = Paths.get(System.getProperty("user.home"), "terracotta", clusterName, "data",
-          "config-db", stripeName, serverName);
+      // Use baseLocation if provided, otherwise fall back to default
+      String basePath = (baseLocation != null && !baseLocation.trim().isEmpty()) 
+          ? baseLocation 
+          : Paths.get(System.getProperty("user.home"), "terracotta", clusterName).toString();
+      Path nodeRepoPath = Paths.get(basePath, "data", "config-db", stripeName, serverName);
       command = script
           + " -f " + stripeconfig.getAbsolutePath()
           + " -s " + nodeHostname
@@ -85,7 +93,11 @@ class RunningServer {
         } else if (newLine.contains("INFO - Moved to State[")) {
           Matcher m = PASSIVE_PATTERN.matcher(newLine);
           if (m.find()) {
-            onState.accept(m.group(1));
+            String state = m.group(1);
+            // Normalize DIAGNOSTIC to DIAGNOSTIC MODE for UI consistency
+            String normalizedState = "DIAGNOSTIC".equals(state) ? "DIAGNOSTIC MODE" : state;
+            onState.accept(normalizedState);
+            serverState = normalizedState;
           }
         } else if (newLine.contains(" - PID is ")) {
           Matcher m = PID_PATTERN.matcher(newLine);
@@ -102,8 +114,46 @@ class RunningServer {
       onTerminated);
   }
 
-  void refreshConsole() {
-    TinyPounderMainUI.updateTextArea(console, lines);
+  public void refreshConsole() {
+    // Drain and broadcast new console lines via WebSocket
+    int size = lines.size();
+    if (size > 0) {
+      java.util.List<String> lineList = new java.util.ArrayList<>(size);
+      lines.drainTo(lineList);
+      
+      // Add to history for reconnection
+      consoleHistory.addAll(lineList);
+      
+      String[] lineArray = lineList.toArray(new String[0]);
+      ConsoleWebSocketEndpoint.broadcastConsoleLines(consoleName, lineArray);
+    }
+  }
+  
+  public String[] getConsoleHistory() {
+    return consoleHistory.toArray(new String[0]);
+  }
+  
+  public long getPid() {
+    return pid;
+  }
+  
+  public String getServerName() {
+    return serverName;
+  }
+  
+  public String getConsoleName() {
+    return consoleName;
   }
 
+  public String getServerState() {
+    return serverState;
+  }
+
+  public String getNodeHostname() {
+    return nodeHostname;
+  }
+
+  public String getNodePort() {
+    return nodePort;
+  }
 }

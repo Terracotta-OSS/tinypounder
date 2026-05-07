@@ -15,8 +15,7 @@
  */
 package org.terracotta.tinypounder;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
+
 import static org.terracotta.tinypounder.CacheConfiguration.ClusterTierType.DEDICATED;
 import static org.terracotta.tinypounder.CacheConfiguration.ClusterTierType.SHARED;
 
@@ -43,18 +42,16 @@ import java.util.concurrent.ThreadLocalRandom;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.IntStream;
 
-@Service
 public class CacheManagerBusinessReflectionImpl implements CacheManagerBusiness {
 
+  private final KitAwareClassLoaderDelegator kitAwareClassLoaderDelegator;
   private final ConcurrentMap<String, Integer> poundingMap = new ConcurrentHashMap<>();
   private static final String NO_CACHE_MANAGER = "NO CACHE MANAGER";
-  private final KitAwareClassLoaderDelegator kitAwareClassLoaderDelegator;
   private Object cacheManager;
   private String defaultOffheapResource;
   private Class<?> ehCacheManagerClass;
   private Random random = new Random();
 
-  @Autowired
   public CacheManagerBusinessReflectionImpl(KitAwareClassLoaderDelegator kitAwareClassLoaderDelegator, ScheduledExecutorService poundingScheduler) throws Exception {
     this.kitAwareClassLoaderDelegator = kitAwareClassLoaderDelegator;
     poundingScheduler.scheduleWithFixedDelay(() -> poundingMap.entrySet().parallelStream().forEach(entryConsumer -> {
@@ -272,8 +269,16 @@ public class CacheManagerBusinessReflectionImpl implements CacheManagerBusiness 
       initMethod.invoke(cacheManager);
       this.cacheManager = cacheManager;
       this.defaultOffheapResource = defaultOffheapResource;
+    } catch (InvocationTargetException e) {
+      // Unwrap the actual exception from reflection
+      Throwable cause = e.getCause();
+      if (cause != null) {
+        throw new RuntimeException("Failed to initialize cache manager: " + cause.getMessage(), cause);
+      } else {
+        throw new RuntimeException("Failed to initialize cache manager: " + e.getMessage(), e);
+      }
     } catch (Exception e) {
-      throw new RuntimeException(e);
+      throw new RuntimeException("Failed to initialize cache manager: " + e.getMessage(), e);
     }
   }
 

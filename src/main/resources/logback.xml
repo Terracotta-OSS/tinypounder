@@ -1,0 +1,27 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<configuration>
+    <!-- Console appender -->
+    <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder>
+            <pattern>%d{yyyy-MM-dd HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+        </encoder>
+    </appender>
+
+    <!-- Root logger with INFO level -->
+    <root level="INFO">
+        <appender-ref ref="CONSOLE" />
+    </root>
+
+    <!-- Application-specific loggers -->
+    <logger name="org.terracotta.tinypounder" level="INFO" />
+    
+    <!-- Terracotta components - reduce noise -->
+    <logger name="org.terracotta" level="WARN" />
+    <logger name="com.tc" level="WARN" />
+    
+    <!-- Ehcache components -->
+    <logger name="org.ehcache" level="WARN" />
+    
+    <!-- Jetty web container -->
+    <logger name="org.eclipse.jetty" level="INFO" />
+</configuration>

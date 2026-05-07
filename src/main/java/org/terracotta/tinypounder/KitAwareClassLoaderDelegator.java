@@ -15,11 +15,7 @@
  */
 package org.terracotta.tinypounder;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
 
-import javax.annotation.PostConstruct;
-import javax.xml.bind.DatatypeConverter;
 import java.io.File;
 import java.io.IOException;
 import java.net.MalformedURLException;
@@ -34,26 +30,9 @@ import java.util.Arrays;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-@Service
 public class KitAwareClassLoaderDelegator {
 
   private ClassLoader urlClassLoader = Thread.currentThread().getContextClassLoader();
-
-  @Autowired
-  private Settings settings;
-
-  @PostConstruct
-  public void init() {
-    String kitPath = settings.getKitPath();
-    if (kitPath != null) {
-      try {
-        URL[] urls = discoverKitClientJars(kitPath);
-        urlClassLoader = URLClassLoader.newInstance(urls, Thread.currentThread().getContextClassLoader());
-      } catch (Exception e) {
-        settings.setKitPath(null); // clear the kit path so that at next startup it is not called with an invalid one
-      }
-    }
-  }
 
   public ClassLoader getUrlClassLoader() {
     return urlClassLoader;
@@ -102,10 +81,21 @@ public class KitAwareClassLoaderDelegator {
 
   private static String hash(File file) {
     try {
-      return DatatypeConverter.printHexBinary(MessageDigest.getInstance("MD5").digest(Files.readAllBytes(file.toPath())));
+      byte[] digest = MessageDigest.getInstance("MD5").digest(Files.readAllBytes(file.toPath()));
+      StringBuilder hexString = new StringBuilder();
+      for (byte b : digest) {
+        String hex = Integer.toHexString(0xff & b);
+        if (hex.length() == 1) hexString.append('0');
+        hexString.append(hex);
+      }
+      return hexString.toString().toUpperCase();
     } catch (Exception e) {
       return file.getName();
     }
+  }
+
+  public boolean isDynamicConfig(String kitPath) {
+    return Paths.get(kitPath, "tools", "bin", "config-tool.sh").toFile().exists();
   }
 
   public boolean containsTerracottaStore() {
@@ -147,7 +137,6 @@ public class KitAwareClassLoaderDelegator {
   }
 
   public void setAndVerifyKitPathAndClassLoader(String kitPath) {
-    settings.setKitPath(kitPath);
     if (kitPath != null && !kitPath.isEmpty()) {
       try {
         URL[] urls = discoverKitClientJars(kitPath);

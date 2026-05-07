@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<web-app xmlns="https://jakarta.ee/xml/ns/jakartaee"
+         xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="https://jakarta.ee/xml/ns/jakartaee
+         https://jakarta.ee/xml/ns/jakartaee/web-app_6_0.xsd"
+         version="6.0">
+
+    <display-name>TinyPounder</display-name>
+    <description>TinyPounder - Ehcache3 and TCStore Testing Tool</description>
+
+    <!-- Session Configuration -->
+    <session-config>
+        <session-timeout>-1</session-timeout> <!-- Never expire, like current Vaadin app -->
+    </session-config>
+
+    <!-- Context Parameters -->
+    <context-param>
+        <param-name>configLocation</param-name>
+        <param-value>~/.tinypounder/config.properties</param-value>
+    </context-param>
+
+    <!-- Servlet Context Listener for initialization -->
+    <listener>
+        <listener-class>org.terracotta.tinypounder.servlet.TinyPounderContextListener</listener-class>
+    </listener>
+
+    <!-- Main API Servlet -->
+    <servlet>
+        <servlet-name>ApiServlet</servlet-name>
+        <servlet-class>org.terracotta.tinypounder.servlet.ApiServlet</servlet-class>
+        <load-on-startup>1</load-on-startup>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>ApiServlet</servlet-name>
+        <url-pattern>/api/*</url-pattern>
+    </servlet-mapping>
+
+    <!-- Static Resource Servlet -->
+    <servlet>
+        <servlet-name>StaticResourceServlet</servlet-name>
+        <servlet-class>org.terracotta.tinypounder.servlet.StaticResourceServlet</servlet-class>
+    </servlet>
+    <servlet-mapping>
+        <servlet-name>StaticResourceServlet</servlet-name>
+        <url-pattern>/css/*</url-pattern>
+    </servlet-mapping>
+    <servlet-mapping>
+        <servlet-name>StaticResourceServlet</servlet-name>
+        <url-pattern>/js/*</url-pattern>
+    </servlet-mapping>
+    <servlet-mapping>
+        <servlet-name>StaticResourceServlet</servlet-name>
+        <url-pattern>/favicon.svg</url-pattern>
+    </servlet-mapping>
+
+    <!-- Welcome Files -->
+    <welcome-file-list>
+        <welcome-file>index.html</welcome-file>
+    </welcome-file-list>
+
+    <!-- Error Pages -->
+    <error-page>
+        <error-code>404</error-code>
+        <location>/index.html</location>
+    </error-page>
+    <error-page>
+        <error-code>500</error-code>
+        <location>/error.html</location>
+    </error-page>
+
+</web-app>

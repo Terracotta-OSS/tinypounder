@@ -1,7 +1,6 @@
 package org.terracotta.tinypounder;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.stereotype.Service;
+
 
 import java.lang.reflect.Array;
 import java.lang.reflect.Field;
@@ -31,12 +30,15 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-@Service
 public class DatasetManagerBusinessReflectionImpl {
 
   private final ConcurrentMap<String, Integer> poundingMap = new ConcurrentHashMap<>();
   private static final String NO_DATASET_MANAGER = "NO DATASET MANAGER";
   private final KitAwareClassLoaderDelegator kitAwareClassLoaderDelegator;
+  
+  public DatasetManagerBusinessReflectionImpl(KitAwareClassLoaderDelegator kitAwareClassLoaderDelegator) {
+    this.kitAwareClassLoaderDelegator = kitAwareClassLoaderDelegator;
+  }
   private Class<?> datasetManagerClass;
   private Object datasetManager;
   private final Map<String, Map<String, Object>> datasetInstancesByDatasetName = new TreeMap<>();
@@ -47,7 +49,6 @@ public class DatasetManagerBusinessReflectionImpl {
   private Class<?> typeClass;
   private Set<String> customCells = (new ConcurrentHashMap<>()).newKeySet();
 
-  @Autowired
   public DatasetManagerBusinessReflectionImpl(KitAwareClassLoaderDelegator kitAwareClassLoaderDelegator, ScheduledExecutorService poundingScheduler) throws Exception {
     this.kitAwareClassLoaderDelegator = kitAwareClassLoaderDelegator;
     poundingScheduler.scheduleWithFixedDelay(() -> poundingMap.entrySet().parallelStream().forEach(entryConsumer -> {
@@ -400,7 +401,7 @@ public class DatasetManagerBusinessReflectionImpl {
         return "CLOSED";
       }
     }
-    return "AVAILABLE";
+    return "INITIALIZED";
   }
 
   public void initializeDatasetManager(String terracottaServerUrl, String securityPath) {
@@ -564,10 +565,38 @@ public class DatasetManagerBusinessReflectionImpl {
 
       Object statisticsService = getStatisticsServiceMethod.invoke(datasetManager);
       Collection<String> datasetInstanceNames = (Collection<String>) getDatasetInstanceNamesMethod.invoke(statisticsService);
-      return datasetInstanceNames.stream().filter(datasetInstanceName -> {
-        String retrievedDatasetName = retrieveDatasetName(datasetInstanceName);
-        return datasetName.equals(retrievedDatasetName);
-      }).collect(Collectors.toSet());
+      
+      // Filter instances for this dataset and ensure they're tracked locally
+      Set<String> matchingInstances = datasetInstanceNames.stream()
+        .filter(instanceName -> {
+          String retrievedDatasetName = retrieveDatasetName(instanceName);
+          return datasetName.equals(retrievedDatasetName);
+        })
+        .collect(Collectors.toSet());
+      
+      // Ensure local tracking map exists for this dataset
+      datasetInstancesByDatasetName.computeIfAbsent(datasetName, k -> new TreeMap<>());
+      
+      // Add any instances found in cluster that aren't tracked locally
+      for (String instanceName : matchingInstances) {
+        if (!datasetInstancesByDatasetName.get(datasetName).containsKey(instanceName)) {
+          try {
+            // Get the dataset instance from the manager
+            Method listDatasetsMethod = datasetManagerClass.getMethod("listDatasets");
+            Map<String, Object> datasetsByName = (Map<String, Object>) listDatasetsMethod.invoke(datasetManager);
+            Method getDatasetMethod = datasetManagerClass.getMethod("getDataset", String.class, typeClass);
+            Object datasetInstance = getDatasetMethod.invoke(datasetManager, datasetName, datasetsByName.get(datasetName));
+            
+            // Track it locally
+            datasetInstancesByDatasetName.get(datasetName).put(instanceName, datasetInstance);
+          } catch (Exception e) {
+            // If we can't get the instance, just skip it
+            System.err.println("Warning: Could not track existing dataset instance " + instanceName + ": " + e.getMessage());
+          }
+        }
+      }
+      
+      return matchingInstances;
     } catch (Exception e) {
       throw new RuntimeException(e);
     }

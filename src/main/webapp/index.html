@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TinyPounder (1.2.1)</title>
+    <link rel="icon" type="image/svg+xml" href="favicon.svg">
+    <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+    <div id="app">
+        <header>
+            <h1>TinyPounder <span class="version">(1.2.1)</span></h1>
+            <p class="subtitle">Ehcache3 and TCStore Testing Tool</p>
+        </header>
+
+        <div class="tab-container">
+            <div class="tabs">
+                <button class="tab-button active" data-tab="kit">STEP 1: KIT</button>
+                <button class="tab-button" data-tab="config">STEP 2: SERVER CONFIGURATIONS</button>
+                <button class="tab-button" data-tab="control">STEP 3: SERVER CONTROL</button>
+                <button class="tab-button" data-tab="runtime">STEP 4: DATASETS & CACHES</button>
+                <button class="tab-button exit-tab" data-tab="exit">EXIT : Close TinyPounder 1.2.1</button>
+            </div>
+
+            <div class="tab-content">
+                <!-- STEP 1: KIT -->
+                <div id="kit-tab" class="tab-pane active">
+                    <div class="section">
+                        <h2>Kit Configuration</h2>
+                        <div id="kit-info" class="info-message">Enter Kit location:</div>
+                        
+                        <div class="form-group">
+                            <label for="kit-path">Kit Location</label>
+                            <input type="text" id="kit-path" placeholder="Path to unzipped kit directory">
+                            <button id="set-kit-path" class="btn btn-primary">Set Kit Path</button>
+                        </div>
+
+                        <div id="license-group" class="form-group" style="display: none;">
+                            <label for="license-path">License Location (Enterprise Edition)</label>
+                            <input type="text" id="license-path" placeholder="Path to license.xml file">
+                            <button id="set-license-path" class="btn btn-primary">Set License Path</button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- STEP 2: SERVER CONFIGURATIONS -->
+                <div id="config-tab" class="tab-pane">
+                    <div class="section">
+                        <h2>Base Configuration</h2>
+                        
+                        <div class="form-group horizontal">
+                            <label for="base-location">Base location for logs, backups and dataroots</label>
+                            <input type="text" id="base-location" value="">
+                            <button id="trash-data" class="btn btn-danger">Delete this folder</button>
+                        </div>
+
+                        <h3>Offheap Resources</h3>
+                        <div id="offheap-control-container"></div>
+                        <div id="offheap-grid" class="config-grid"></div>
+
+                        <div id="ee-config" style="display: none;">
+                            <h3>Data Roots (Enterprise Edition)</h3>
+                            <div id="dataroot-control-container"></div>
+                            <div class="checkbox-group">
+                                <label><input type="checkbox" id="platform-persistence" checked> Platform Persistence</label>
+                                <label><input type="checkbox" id="platform-backup" checked> Platform Backup</label>
+                            </div>
+                            <div id="dataroot-grid" class="config-grid"></div>
+
+                            <h3>Security</h3>
+                            <div class="checkbox-group">
+                                <label><input type="checkbox" id="server-security"> Security</label>
+                                <input type="text" id="server-security-path" placeholder="Security Root Directory" style="display: none; width: 40em;">
+                            </div>
+
+                            <h3>Failover Priority</h3>
+                            <div class="radio-group">
+                                <label><input type="radio" name="failover" value="availability" checked> Availability</label>
+                                <label><input type="radio" name="failover" value="consistency"> Consistency</label>
+                                <label for="voter-count" id="voter-count-label" style="display: none;">Voters:</label>
+                                <input type="number" id="voter-count" placeholder="Voters count" min="1" style="display: none;">
+                            </div>
+                        </div>
+
+                        <h3>Server Configuration</h3>
+                        <div id="stripe-control-container"></div>
+                        <div id="server-control-container"></div>
+                        <div class="slider-group">
+                            <label id="reconnect-label">Reconnect window: 120 seconds</label>
+                            <input type="range" id="reconnect-slider" min="5" max="300" value="120">
+                        </div>
+                        <div id="server-grid" class="config-grid"></div>
+
+                        <button id="generate-config" class="btn btn-primary btn-large">Generate config files</button>
+                        <textarea id="config-preview" readonly></textarea>
+                    </div>
+                </div>
+
+                <!-- STEP 3: SERVER CONTROL -->
+                <div id="control-tab" class="tab-pane">
+                    <div class="section">
+                        <h2>Cluster Control</h2>
+                        
+                        <div class="control-buttons">
+                            <button id="start-all-servers" class="btn btn-primary">Start all servers</button>
+                            <input type="text" id="cluster-name" value="MyCluster" placeholder="Cluster name">
+                            <button id="configure-cluster" class="btn btn-primary" disabled>Configure</button>
+                            <button id="backup-cluster" class="btn btn-primary" disabled>Backup</button>
+                            <button id="dump-cluster" class="btn btn-primary" disabled>Dump</button>
+                            <button id="stop-cluster" class="btn btn-danger" disabled>Stop cluster</button>
+                            <button id="status-cluster" class="btn btn-primary" disabled>Status</button>
+                        </div>
+
+                        <h3>Server Controls</h3>
+                        <div id="server-controls" class="server-controls-grid"></div>
+
+                        <h3>Console Output</h3>
+                        <div class="console-tabs">
+                            <div class="console-tab-buttons">
+                                <button class="console-tab-button active" data-console="main">Main</button>
+                            </div>
+                            <div class="console-content">
+                                <pre id="console-main" class="console active"></pre>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- STEP 4: DATASETS & CACHES -->
+                <div id="runtime-tab" class="tab-pane">
+                    <div class="section">
+                        <div id="client-security-section" style="display: none;">
+                            <h2>Client Security</h2>
+                            <div class="checkbox-group">
+                                <label><input type="checkbox" id="client-security"> Security</label>
+                                <input type="text" id="client-security-path" placeholder="Security Root Directory" style="display: none; width: 40em;">
+                            </div>
+                        </div>
+
+                        <h2>Cache Manager</h2>
+                        <div id="cache-manager-status" class="status-section">
+                            <span class="status-label">Status:</span>
+                            <span id="cm-status">UNINITIALIZED</span>
+                            <button id="cm-show-config" class="btn btn-info" disabled>Show Configuration</button>
+                            <button id="cm-close" class="btn btn-secondary" disabled>Close CacheManager</button>
+                            <button id="cm-destroy" class="btn btn-danger" disabled>Destroy CacheManager</button>
+                        </div>
+
+                        <div id="cache-manager-init" class="init-section">
+                            <h3>Initialize Cache Manager</h3>
+                            <div class="form-group">
+                                <label><input type="checkbox" id="cm-clustered" checked> Clustered service</label>
+                            </div>
+                            <div id="cm-clustered-config" class="config-grid">
+                                <div class="form-group">
+                                    <label for="cm-terracotta-url">Terracotta URL</label>
+                                    <input type="text" id="cm-terracotta-url" value="localhost:9410" placeholder="host:port">
+                                </div>
+                                <div class="form-group">
+                                    <label for="cm-cluster-name">Cluster Tier Manager Name</label>
+                                    <input type="text" id="cm-cluster-name" value="TinyPounderCM" placeholder="ClusterTierManager name">
+                                </div>
+                                <div class="form-group">
+                                    <label for="cm-offheap-resource">Offheap Resource</label>
+                                    <input type="text" id="cm-offheap-resource" value="offheap-1" placeholder="offheap resource name">
+                                </div>
+                                <div class="form-group" id="cm-disk-resource-group" style="display: none;">
+                                    <label for="cm-disk-resource">Disk Resource</label>
+                                    <input type="text" id="cm-disk-resource" value="dataroot-1" placeholder="disk resource name">
+                                </div>
+                            </div>
+                            <div class="form-group">
+                                <label><input type="checkbox" id="cm-persistence" checked> Persistence</label>
+                                <input type="text" id="cm-disk-location" value="tinyPounderDiskPersistence" placeholder="Local disk folder">
+                            </div>
+                            <button id="cm-initialize" class="btn btn-primary">Initialize CacheManager</button>
+                        </div>
+
+                        <div id="cache-section" style="display: none;">
+                            <h3>Caches</h3>
+                            <div id="cache-list"></div>
+                            <div class="cache-create">
+                                <div class="form-group">
+                                    <label for="cache-name">Cache Name</label>
+                                    <input type="text" id="cache-name" placeholder="a cache name">
+                                </div>
+                                <div class="form-group">
+                                    <label for="cache-onheap-size">Onheap</label>
+                                    <div>
+                                        <select id="cache-onheap-size">
+                                            <option value="0">0</option>
+                                            <option value="1">1</option>
+                                            <option value="5">5</option>
+                                            <option value="10">10</option>
+                                            <option value="50" selected>50</option>
+                                            <option value="100">100</option>
+                                            <option value="500">500</option>
+                                            <option value="1000">1000</option>
+                                            <option value="5000">5000</option>
+                                            <option value="10000">10000</option>
+                                        </select>
+                                        <select id="cache-onheap-unit">
+                                            <option value="ENTRIES" selected>ENTRIES</option>
+                                            <option value="KB">KB</option>
+                                            <option value="MB">MB</option>
+                                            <option value="GB">GB</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="cache-offheap-size">Offheap</label>
+                                    <div>
+                                        <select id="cache-offheap-size">
+                                            <option value="0">0</option>
+                                            <option value="1" selected>1</option>
+                                            <option value="5">5</option>
+                                            <option value="10">10</option>
+                                            <option value="50">50</option>
+                                            <option value="100">100</option>
+                                            <option value="500">500</option>
+                                            <option value="1000">1000</option>
+                                            <option value="5000">5000</option>
+                                            <option value="10000">10000</option>
+                                        </select>
+                                        <select id="cache-offheap-unit">
+                                            <option value="KB">KB</option>
+                                            <option value="MB" selected>MB</option>
+                                            <option value="GB">GB</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="cache-disk-size">Disk</label>
+                                    <div>
+                                        <select id="cache-disk-size">
+                                            <option value="0" selected>0</option>
+                                            <option value="1">1</option>
+                                            <option value="5">5</option>
+                                            <option value="10">10</option>
+                                            <option value="50">50</option>
+                                            <option value="100">100</option>
+                                            <option value="500">500</option>
+                                            <option value="1000">1000</option>
+                                            <option value="5000">5000</option>
+                                            <option value="10000">10000</option>
+                                        </select>
+                                        <select id="cache-disk-unit">
+                                            <option value="KB">KB</option>
+                                            <option value="MB" selected>MB</option>
+                                            <option value="GB">GB</option>
+                                        </select>
+                                    </div>
+                                </div>
+                                <div class="form-group">
+                                    <label for="cache-clustered">Clustered</label>
+                                    <select id="cache-clustered">
+                                        <option value="NONE">NONE</option>
+                                        <option value="shared" selected>shared</option>
+                                        <option value="dedicated 10MB">dedicated 10MB</option>
+                                        <option value="dedicated 100MB">dedicated 100MB</option>
+                                    </select>
+                                </div>
+                                <button id="add-cache" class="btn btn-primary">Add cache</button>
+                            </div>
+                        </div>
+
+                        <div id="dataset-manager-section" style="display: none;">
+                            <h2>Dataset Manager (Enterprise Edition)</h2>
+                            <div id="dataset-manager-status" class="status-section">
+                                <span class="status-label">Status:</span>
+                                <span id="dm-status">NO DATASET MANAGER</span>
+                                <button id="dm-close" class="btn btn-secondary" disabled>Close DatasetManager</button>
+                            </div>
+
+                            <div id="dataset-manager-init" class="init-section">
+                                <h3>Initialize Dataset Manager</h3>
+                                <input type="text" id="dm-terracotta-url" value="localhost:9410" placeholder="Terracotta host:port">
+                                <button id="dm-initialize" class="btn btn-primary">Initialize DatasetManager</button>
+                            </div>
+
+                            <div id="dataset-section" style="display: none;">
+                                <h3>Datasets</h3>
+                                <div id="dataset-list"></div>
+                                <div class="dataset-create">
+                                    <div class="form-group">
+                                        <label for="dataset-name">Dataset Name</label>
+                                        <input type="text" id="dataset-name" placeholder="Enter dataset name">
+                                    </div>
+                                    <div class="form-group">
+                                        <label for="dataset-key-type">Key Type</label>
+                                        <select id="dataset-key-type">
+                                            <option value="STRING">STRING</option>
+                                            <option value="LONG">LONG</option>
+                                            <option value="INTEGER">INTEGER</option>
+                                            <option value="DOUBLE">DOUBLE</option>
+                                            <option value="FLOAT">FLOAT</option>
+                                            <option value="CHAR">CHAR</option>
+                                            <option value="BOOLEAN">BOOLEAN</option>
+                                            <option value="BYTE">BYTE</option>
+                                        </select>
+                                    </div>
+                                    <div class="form-group">
+                                        <label><input type="checkbox" id="dataset-offheap" checked> Offheap</label>
+                                        <input type="text" id="dataset-offheap-resource" value="offheap-1" placeholder="offheap resource name">
+                                    </div>
+                                    <div class="form-group">
+                                        <label><input type="checkbox" id="dataset-disk" checked> Disk</label>
+                                        <input type="text" id="dataset-disk-resource" value="dataroot-1" placeholder="disk resource name">
+                                    </div>
+                                    <button id="add-dataset" class="btn btn-primary">Add dataset</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div id="notification" class="notification"></div>
+        
+        <!-- Configuration Modal -->
+        <div id="config-modal" class="modal" style="display: none;">
+            <div class="modal-content">
+                <span class="modal-close">&times;</span>
+                <h2>Cache Manager Configuration</h2>
+                <pre id="config-text" style="background: #f5f5f5; padding: 15px; border-radius: 4px; overflow: auto; max-height: 500px;"></pre>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/api.js"></script>
+    <script src="js/ui.js"></script>
+    <script src="js/console.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>

@@ -1,10 +1,5 @@
 package org.terracotta.tinypounder;
 
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
-
-import javax.annotation.PostConstruct;
-import javax.annotation.PreDestroy;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -16,45 +11,75 @@ import java.util.Optional;
 import java.util.Properties;
 
 /**
+ * Settings management for TinyPounder application.
+ * Persists configuration to ~/.tinypounder/config.properties
+ * 
  * @author Mathieu Carbou
  */
-@Service
 public class Settings {
 
-  @Value("${kitPath}")
+  private static final String AVAILABILITY = "availability";
+  
   private String kitPath;
-
-  @Value("${serverSecurityPath}")
   private String serverSecurityPath;
-
-  @Value("${clientSecurityPath}")
   private String clientSecurityPath;
-
-  @Value("${licensePath}")
   private String licensePath;
-
-  @Value("${failoverPriority}")
+  private String baseLocation;
   private String failoverPriority;
-
-  @Value("${offheapCount}")
+  private boolean serverSecurityEnabled;
+  private boolean clientSecurityEnabled;
   private int offheapCount;
-
-  @Value("${dataRootCount}")
   private int dataRootCount;
-
-  @Value("${serverCount}")
   private int serverCount;
-
-  @Value("${stripeCount}")
   private int stripeCount;
-
-  @Value("${reconnectWindow}")
   private int reconnectWindow;
 
-  private final File config = new File(System.getProperty("user.home"), ".tinypounder/config.properties");
+  private final File config;
 
-  @PostConstruct
-  public void load() {
+  /**
+   * Default constructor - uses ~/.tinypounder/config.properties
+   */
+  public Settings() {
+    this(new File(System.getProperty("user.home"), ".tinypounder/config.properties"));
+  }
+
+  /**
+   * Constructor for testing - allows custom config file location
+   * @param configFile the config file to use
+   */
+  Settings(File configFile) {
+    this.config = configFile;
+    // Initialize with defaults
+    this.baseLocation = System.getProperty("user.home") + "/terracotta/MyCluster";
+    this.failoverPriority = AVAILABILITY;
+    this.serverSecurityEnabled = false;
+    this.clientSecurityEnabled = false;
+    this.offheapCount = 2;
+    this.dataRootCount = 2;
+    this.serverCount = 2;
+    this.stripeCount = 2;
+    this.reconnectWindow = 120;
+  }
+
+  /**
+   * Normalize a path by trimming trailing separators.
+   */
+  private static String normalizePath(String path) {
+    if (path == null || path.isEmpty()) {
+      return path;
+    }
+    // Trim trailing slashes and backslashes
+    while (path.endsWith("/") || path.endsWith("\\")) {
+      path = path.substring(0, path.length() - 1);
+    }
+    return path;
+  }
+
+  /**
+   * Load settings from config file and system properties.
+   * System properties take precedence over saved config.
+   */
+  public synchronized void load() {
     config.getParentFile().mkdirs();
     Properties properties = new Properties();
     if (config.exists()) {
@@ -64,91 +89,73 @@ public class Settings {
         throw new UncheckedIOException(e);
       }
     }
-    // always prefer system props over saved config
-    if (serverSecurityPath == null || serverSecurityPath.isEmpty()) {
-      serverSecurityPath = properties.getProperty("serverSecurityPath");
-      if (serverSecurityPath != null) {
-        File folder = new File(serverSecurityPath);
-        if (!folder.exists() || !folder.isDirectory()) {
-          serverSecurityPath = null;
-        }
-      }
+    
+    // Load from system properties first, then from config file
+    // Note: We don't validate if paths exist here - just load the saved values
+    // Validation happens when the user tries to use them (e.g., in API handlers)
+    serverSecurityPath = normalizePath(System.getProperty("serverSecurityPath", properties.getProperty("serverSecurityPath")));
+    clientSecurityPath = normalizePath(System.getProperty("clientSecurityPath", properties.getProperty("clientSecurityPath")));
+    kitPath = normalizePath(System.getProperty("kitPath", properties.getProperty("kitPath")));
+    licensePath = normalizePath(System.getProperty("licensePath", properties.getProperty("licensePath")));
+    
+    baseLocation = normalizePath(System.getProperty("baseLocation", properties.getProperty("baseLocation")));
+    if (baseLocation == null || baseLocation.trim().isEmpty()) {
+      baseLocation = System.getProperty("user.home") + "/terracotta/MyCluster";
     }
-
-    if (clientSecurityPath == null || clientSecurityPath.isEmpty()) {
-      clientSecurityPath = properties.getProperty("clientSecurityPath");
-      if (clientSecurityPath != null) {
-        File folder = new File(clientSecurityPath);
-        if (!folder.exists() || !folder.isDirectory()) {
-          clientSecurityPath = null;
-        }
-      }
+    
+    failoverPriority = System.getProperty("failoverPriority", properties.getProperty("failoverPriority"));
+    if (failoverPriority == null) {
+      failoverPriority = AVAILABILITY;
     }
-
-    if (kitPath == null || kitPath.isEmpty()) {
-      kitPath = properties.getProperty("kitPath");
-      if (kitPath != null) {
-        File folder = new File(kitPath);
-        if (!folder.exists() || !folder.isDirectory()) {
-          kitPath = null;
-        }
-      }
-    }
-    if (licensePath == null || licensePath.isEmpty()) {
-      licensePath = properties.getProperty("licensePath");
-      if (licensePath != null) {
-        File file = new File(licensePath);
-        if (!file.exists() || !file.isFile()) {
-          licensePath = null;
-        }
-      }
-    }
-    if (failoverPriority == null || failoverPriority.isEmpty()) {
-      failoverPriority = properties.getProperty("failoverPriority");
-      if (failoverPriority == null) {
-        failoverPriority = TinyPounderMainUI.AVAILABILITY;
-      }
-    }
+    
+    serverSecurityEnabled = Boolean.parseBoolean(
+        System.getProperty("serverSecurityEnabled", properties.getProperty("serverSecurityEnabled", "false")));
+    
+    clientSecurityEnabled = Boolean.parseBoolean(
+        System.getProperty("clientSecurityEnabled", properties.getProperty("clientSecurityEnabled", "false")));
+    
+    offheapCount = Integer.parseInt(System.getProperty("offheapCount", properties.getProperty("offheapCount", "0")));
     if (offheapCount < 1) {
-      offheapCount = Integer.parseInt(properties.getProperty("offheapCount", "0"));
-      if (offheapCount < 1) {
-        offheapCount = 2;
-      }
+      offheapCount = 2;
     }
+    
+    dataRootCount = Integer.parseInt(System.getProperty("dataRootCount", properties.getProperty("dataRootCount", "0")));
     if (dataRootCount < 1) {
-      dataRootCount = Integer.parseInt(properties.getProperty("dataRootCount", "0"));
-      if (dataRootCount < 1) {
-        dataRootCount = 2;
-      }
+      dataRootCount = 2;
     }
+    
+    serverCount = Integer.parseInt(System.getProperty("serverCount", properties.getProperty("serverCount", "0")));
     if (serverCount < 1) {
-      serverCount = Integer.parseInt(properties.getProperty("serverCount", "0"));
-      if (serverCount < 1) {
-        serverCount = 2;
-      }
+      serverCount = 2;
     }
+    
+    stripeCount = Integer.parseInt(System.getProperty("stripeCount", properties.getProperty("stripeCount", "0")));
     if (stripeCount < 1) {
-      stripeCount = Integer.parseInt(properties.getProperty("stripeCount", "0"));
-      if (stripeCount < 1) {
-        stripeCount = 2;
-      }
+      stripeCount = 2;
     }
+    
+    reconnectWindow = Integer.parseInt(System.getProperty("reconnectWindow", properties.getProperty("reconnectWindow", "0")));
     if (reconnectWindow < 5) {
-      reconnectWindow = Integer.parseInt(properties.getProperty("reconnectWindow", "0"));
-      if (reconnectWindow < 5) {
-        reconnectWindow = 120;
-      }
+      reconnectWindow = 120;
     }
   }
 
-  @PreDestroy
-  public void save() {
+  /**
+   * Save current settings to config file.
+   */
+  public synchronized void save() {
+    // Ensure parent directory exists
+    if (!config.getParentFile().exists()) {
+      config.getParentFile().mkdirs();
+    }
+    
     Properties properties = new Properties();
+    // Always save all properties to ensure consistent round-trip behavior
     if (kitPath != null) {
       properties.setProperty("kitPath", kitPath);
     }
-    if (failoverPriority != null) {
-      properties.setProperty("failoverPriority", failoverPriority);
+    if (licensePath != null) {
+      properties.setProperty("licensePath", licensePath);
     }
     if (serverSecurityPath != null) {
       properties.setProperty("serverSecurityPath", serverSecurityPath);
@@ -156,29 +163,33 @@ public class Settings {
     if (clientSecurityPath != null) {
       properties.setProperty("clientSecurityPath", clientSecurityPath);
     }
-    if (licensePath != null) {
-      properties.setProperty("licensePath", licensePath);
+    if (baseLocation != null) {
+      properties.setProperty("baseLocation", baseLocation);
     }
-    if (offheapCount >= 1) {
-      properties.setProperty("offheapCount", String.valueOf(offheapCount));
+    if (failoverPriority != null) {
+      properties.setProperty("failoverPriority", failoverPriority);
     }
-    if (dataRootCount >= 1) {
-      properties.setProperty("dataRootCount", String.valueOf(dataRootCount));
-    }
-    if (serverCount >= 1) {
-      properties.setProperty("serverCount", String.valueOf(serverCount));
-    }
-    if (stripeCount >= 1) {
-      properties.setProperty("stripeCount", String.valueOf(stripeCount));
-    }
-    if (reconnectWindow >= 5) {
-      properties.setProperty("reconnectWindow", String.valueOf(reconnectWindow));
-    }
+    properties.setProperty("serverSecurityEnabled", String.valueOf(serverSecurityEnabled));
+    properties.setProperty("clientSecurityEnabled", String.valueOf(clientSecurityEnabled));
+    properties.setProperty("offheapCount", String.valueOf(offheapCount));
+    properties.setProperty("dataRootCount", String.valueOf(dataRootCount));
+    properties.setProperty("serverCount", String.valueOf(serverCount));
+    properties.setProperty("stripeCount", String.valueOf(stripeCount));
+    properties.setProperty("reconnectWindow", String.valueOf(reconnectWindow));
+    
     try (OutputStreamWriter writer = new OutputStreamWriter(new FileOutputStream(config), "UTF-8")) {
-      properties.store(writer, "AUTO-GENERATED FILE");
+      properties.store(writer, "AUTO-GENERATED FILE - TinyPounder Settings");
+      System.out.println("Settings saved to: " + config.getAbsolutePath());
     } catch (IOException e) {
-      throw new UncheckedIOException(e);
+      System.err.println("FATAL: Failed to save settings to: " + config.getAbsolutePath());
+      System.err.println("Error: " + e.getMessage());
+      e.printStackTrace();
+      throw new UncheckedIOException("Failed to save settings to " + config.getAbsolutePath(), e);
     }
+  }
+
+  public File getConfigFile() {
+    return config;
   }
 
   public String getServerSecurityPath() {
@@ -186,7 +197,7 @@ public class Settings {
   }
 
   public void setServerSecurityPath(String serverSecurityPath) {
-    this.serverSecurityPath = serverSecurityPath;
+    this.serverSecurityPath = normalizePath(serverSecurityPath);
   }
 
   public String getClientSecurityPath() {
@@ -194,7 +205,7 @@ public class Settings {
   }
 
   public void setClientSecurityPath(String clientSecurityPath) {
-    this.clientSecurityPath = clientSecurityPath;
+    this.clientSecurityPath = normalizePath(clientSecurityPath);
   }
 
   public String getKitPath() {
@@ -202,7 +213,7 @@ public class Settings {
   }
 
   public void setKitPath(String kitPath) {
-    this.kitPath = kitPath;
+    this.kitPath = normalizePath(kitPath);
   }
 
   public Optional<String> getLicensePath() {
@@ -210,7 +221,7 @@ public class Settings {
   }
 
   public void setLicensePath(String licensePath) {
-    this.licensePath = licensePath;
+    this.licensePath = normalizePath(licensePath);
   }
 
   public int getOffheapCount() {
@@ -269,5 +280,29 @@ public class Settings {
 
   public void setFailoverPriority(String failoverPriority) {
     this.failoverPriority = failoverPriority;
+  }
+
+  public String getBaseLocation() {
+    return baseLocation;
+  }
+
+  public void setBaseLocation(String baseLocation) {
+    this.baseLocation = normalizePath(baseLocation);
+  }
+
+  public boolean isServerSecurityEnabled() {
+    return serverSecurityEnabled;
+  }
+
+  public void setServerSecurityEnabled(boolean serverSecurityEnabled) {
+    this.serverSecurityEnabled = serverSecurityEnabled;
+  }
+
+  public boolean isClientSecurityEnabled() {
+    return clientSecurityEnabled;
+  }
+
+  public void setClientSecurityEnabled(boolean clientSecurityEnabled) {
+    this.clientSecurityEnabled = clientSecurityEnabled;
   }
 }

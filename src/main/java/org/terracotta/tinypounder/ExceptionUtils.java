@@ -32,10 +32,13 @@ public class ExceptionUtils {
       last = t;
       t = t.getCause();
     }
-    if (last instanceof InvocationTargetException) {
-      last = ((InvocationTargetException) last).getTargetException();
+    // Java 21 pattern matching for instanceof
+    if (last instanceof InvocationTargetException ite) {
+      Throwable target = ite.getTargetException();
+      if (target != null) {
+        last = target;
+      }
     }
-    last.printStackTrace();
     return last;
   }
 

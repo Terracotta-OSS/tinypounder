@@ -247,6 +247,7 @@ public class TinyPounderMainUI extends UI {
       clientSecurityLayout.addStyleName("client-layout");
       runtimeLayout.addComponentsAndExpand(clientSecurityLayout);
       addClientSecurityControls();
+
     } else if (!kitAwareClassLoaderDelegator.containsTerracottaStore() && clientSecurityLayout != null) {
       // kit does no longer contain tc store libs; clear the datasetLayout
       runtimeLayout.removeComponent(datasetLayout);
