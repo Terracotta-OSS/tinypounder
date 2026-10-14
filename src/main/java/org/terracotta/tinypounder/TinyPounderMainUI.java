@@ -552,9 +552,7 @@ public class TinyPounderMainUI extends UI {
           TextField serverNameTF = (TextField) form.getComponent(0);
           String serverName = serverNameTF.getValue();
           TextField nodeHostnameTF = (TextField) form.getComponent(2);
-          String nodeHostname = nodeHostnameTF.getValue();
           TextField clientPortTF = (TextField) form.getComponent(3);
-          String clientPort = clientPortTF.getValue();
 
           serverControls.addComponent(new Label(serverName));
 
@@ -590,7 +588,7 @@ public class TinyPounderMainUI extends UI {
 
           startBT.addClickListener((Button.ClickListener) event -> {
             String clusterName = clusterNameTF.getValue();
-            startServer(clusterName, stripeName, (String) event.getButton().getData(), nodeHostname, clientPort, startBT, killBT,
+            startServer(clusterName, stripeName, (String) event.getButton().getData(), nodeHostnameTF.getValue(), clientPortTF.getValue(), startBT, killBT,
                 statusBT, state, pid);
           });
           killBT.addClickListener((Button.ClickListener) event -> {
